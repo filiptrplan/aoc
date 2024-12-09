@@ -45,16 +45,27 @@ impl Iterator for ChooseIter {
     }
 }
 
-fn antinode_pos(pos1: &Pos, pos2: &Pos) -> ((i32, i32), (i32, i32)) {
+fn antinode_pos(pos1: &Pos, pos2: &Pos) -> Vec<(i32, i32)> {
     // Dodam enici
+    let mut positions = Vec::new();
     let pos1i = (pos1.0 as i32, pos1.1 as i32);
     let pos2i = (pos2.0 as i32, pos2.1 as i32);
     let diff1 = (pos1i.0 - pos2i.0, pos1i.1 - pos2i.1);
     let diff2 = (pos2i.0 - pos1i.0, pos2i.1 - pos1i.1);
-    (
-        (pos1i.0 + diff1.0, pos1i.1 + diff1.1),
-        (pos2i.0 + diff2.0, pos2i.1 + diff2.1),
-    )
+
+    let mut pos = pos1i;
+    while !(pos.0 < 0 || pos.1 < 0 || pos.0 > 100 || pos.1 > 100) {
+        positions.push(pos);
+        pos.0 += diff1.0;
+        pos.1 += diff1.1;
+    }
+    pos = pos2i;
+    while !(pos.0 < 0 || pos.1 < 0 || pos.0 > 100 || pos.1 > 100) {
+        positions.push(pos);
+        pos.0 += diff2.0;
+        pos.1 += diff2.1;
+    }
+    positions
 }
 
 fn gen_antenna_positions(field: &Vec<Vec<u8>>) -> HashMap<u8, Vec<Pos>> {
@@ -79,9 +90,10 @@ fn gen_antinode_pos(positions: &HashMap<u8, Vec<Pos>>) -> HashSet<(i32, i32)> {
     for (_, pos_vec) in positions {
         let choose = ChooseIter::new(pos_vec.len());
         for (p1, p2) in choose {
-            let (a1, a2) = antinode_pos(&pos_vec[p1], &pos_vec[p2]);
-            set.insert(a1);
-            set.insert(a2);
+            let antinodes = antinode_pos(&pos_vec[p1], &pos_vec[p2]);
+            for a in antinodes {
+                set.insert(a);
+            }
         }
     }
     set
