@@ -1,78 +1,75 @@
-struct DS {
-    parents: Vec<usize>,
-    rank: Vec<u32>,
-    h: usize,
-    w: usize
-}
+use std::{collections::HashSet, io};
 
 // y, x
-type Coord = (usize, usize);
+type Coord = (i32, i32);
 
-impl DS {
-    fn new(w: usize, h:usize) -> DS {
-        let size = h * w;
-        DS {
-            parents: (0..size).collect(),
-            rank: vec![1; size],
-            h,
-            w
-        }
+const DIRECTIONS: [(i32, i32); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+
+fn bfs(field: &Vec<Vec<i32>>, visited: &mut HashSet<Coord>, curr_step: i32, coord: Coord) -> i32 {
+    if coord.0 < 0
+        || coord.1 < 0
+        || coord.0 >= field.len() as i32
+        || coord.1 >= field[0].len() as i32
+    {
+        return 0;
     }
 
-    fn to_idx(&self, i: usize, j: usize) -> usize {
-        i * self.w + j
+    let u_coord = (coord.0 as usize, coord.1 as usize);
+
+    if curr_step != field[u_coord.0][u_coord.1] {
+        return 0;
     }
 
-    fn from_idx(&self, idx: usize) -> Coord {
-        (idx / self.w, idx % self.w)
-    }
-
-    fn find_idx(&mut self, idx: usize) -> usize {
-        if self.parents[idx] == idx {
-            return idx;
+    if curr_step == 9 && field[u_coord.0][u_coord.1] == 9 {
+        if visited.contains(&coord) {
+            return 0;
         } else {
-            let res = self.find_idx(self.parents[idx]);
-            self.parents[idx] = res;
-            return res;
+            visited.insert(coord);
+            return 1;
         }
-    }
-    
-    fn find(&mut self, i: usize, j: usize) -> Coord {
-        let idx = self.to_idx(i, j);
-        let res = self.find_idx(idx);
-        self.from_idx(res)
+    } else if curr_step == 9 {
+        return 0;
     }
 
-    fn union_idx(&mut self, i: usize, j: usize) {
-        let idx1 = self.find_idx(i);
-        let idx2 = self.find_idx(j);
-
-        if idx1 == idx2 {
-            return;
-        }
-
-        let rank1 = self.rank[idx1];
-        let rank2 = self.rank[idx2];
-
-
-        if rank1 < rank2 {
-            self.parents[idx1] = idx2;
-        } else if rank2 < rank1 {
-            self.parents[idx2] = idx1;
-        } else {
-            self.parents[idx1] = idx2;
-            self.rank[idx2] += 1;
-        }
+    let mut res = 0;
+    for dir in DIRECTIONS.iter() {
+        let new_coord = (coord.0 + dir.0, coord.1 + dir.1);
+        res += bfs(&field, visited, curr_step + 1, new_coord);
     }
 
-    fn union(&mut self, i: Coord, j: Coord) {
-        let idx1 = self.to_idx(i.0, i.1);
-        let idx2 = self.to_idx(j.0, j.1);
-        self.union_idx(idx1, idx2);
-    }
+    return res;
 }
 
-
 fn main() {
+    let stdin = io::stdin();
+    let mut buf = String::new();
+    let mut field: Vec<Vec<i32>> = Vec::new();
 
+    loop {
+        buf.clear();
+        let res = stdin.read_line(&mut buf);
+        if let Ok(0) = res {
+            break;
+        }
+        field.push(
+            buf.trim_end()
+                .as_bytes()
+                .iter()
+                .map(|x| (x - b'0') as i32)
+                .collect(),
+        );
+    }
+
+    let mut res = 0;
+    for i in 0..field.len() {
+        for j in 0..field[i].len() {
+            if field[i][j] == 0 {
+                let mut visited = HashSet::new();
+                let score =  bfs(&field, &mut visited, 0, (i as i32, j as i32));
+                res += score;
+            }
+        }
+    }
+
+    println!("{}", res);
 }
