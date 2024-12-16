@@ -47,7 +47,7 @@ enum Cell {
 }
 
 struct Problem {
-    queue: BinaryHeap<State>,
+    queue: BinaryHeap<Rc<State>>,
     field: Vec<Vec<Cell>>,
     field_cost: Vec<Vec<Vec<u128>>>,
     start: Coord,
@@ -215,13 +215,13 @@ impl Problem {
     }
 
     fn solve(&mut self) -> u128 {
-        self.queue.push(State {
+        self.queue.push(Rc::new(State {
             cost: self.heuristic(self.start, Dir::Right),
             path_cost: 0,
             position: self.start,
             dir: Dir::Right,
             prev: None,
-        });
+        }));
 
         let w = self.field[0].len();
         let h = self.field.len();
@@ -238,7 +238,7 @@ impl Problem {
                 }
                 if let Some(cost) = res {
                     if cost == state.path_cost {
-                        let mut state_prev: Option<Rc<State>> = Some(Rc::new(state.clone()));
+                        let mut state_prev: Option<Rc<State>> = Some(state);
                         while let Some(state_pr) = state_prev {
                             optimal[state_pr.position.0][state_pr.position.1] = true;
                             state_prev = state_pr.prev.clone();
@@ -247,7 +247,6 @@ impl Problem {
                 }
                 continue;
             }
-            let prev = Some(Rc::new(state.clone()));
             self.field_cost[state.position.0][state.position.1][state.dir.idx()] = state.path_cost;
             // Generate its neighbours
             // First generate the turns
@@ -257,26 +256,26 @@ impl Problem {
             for turn in other_turns {
                 let new_cost = state.path_cost + 1000 * turn.diff(&state.dir);
                 if new_cost <= self.field_cost[state.position.0][state.position.1][turn.idx()] {
-                    self.queue.push(State {
+                    self.queue.push(Rc::new(State {
                         position: state.position,
                         path_cost: new_cost,
                         cost: new_cost + self.heuristic(state.position, turn),
                         dir: turn,
-                        prev: prev.clone(),
-                    });
+                        prev: Some(state.clone()),
+                    }));
                 }
             }
             // Then the forward move
             if let Some(new_pos) = self.move_state(&state) {
                 let new_cost = state.path_cost + 1;
                 if new_cost <= self.field_cost[new_pos.0][new_pos.1][state.dir.idx()] {
-                    self.queue.push(State {
+                    self.queue.push(Rc::new(State {
                         position: new_pos,
                         path_cost: new_cost,
                         cost: new_cost + self.heuristic(new_pos, state.dir),
                         dir: state.dir,
-                        prev,
-                    });
+                        prev: Some(state)
+                    }));
                 }
             }
         }
