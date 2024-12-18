@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 disjoint = "0.8.0"
+indicatif = "0.17.9"
 regex = "1.11.1"
